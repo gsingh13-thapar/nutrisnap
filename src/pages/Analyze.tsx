@@ -221,11 +221,33 @@ interface AnalysisResult { food_items: FoodItem[]; total_calories: number; total
         throw new Error("The AI returned an invalid format. Fallback needed.");
       }
 
-      setResult(parsedResult);
-      toast({
-        title: "Analysis complete!",
-        description: `Successfully analyzed image with Gemini Vision AI.`,
-      });
+      // --- Dictionary Override Logic ---
+      const lowerDesc = parsedResult.meal_description.toLowerCase();
+      let matchedOfflineMeal = null;
+
+      if (lowerDesc.includes("chicken") && lowerDesc.includes("rice")) {
+        matchedOfflineMeal = REALISTIC_MOCK_MEALS[0];
+      } else if (lowerDesc.includes("protein") && lowerDesc.includes("shake")) {
+        matchedOfflineMeal = REALISTIC_MOCK_MEALS[1];
+      } else if (lowerDesc.includes("steak")) {
+        matchedOfflineMeal = REALISTIC_MOCK_MEALS[2];
+      } else if (lowerDesc.includes("oats") || lowerDesc.includes("oatmeal")) {
+        matchedOfflineMeal = REALISTIC_MOCK_MEALS[3];
+      }
+
+      if (matchedOfflineMeal) {
+        setResult(matchedOfflineMeal);
+        toast({
+          title: "Matched Exact Gym Meal!",
+          description: `Identified "${matchedOfflineMeal.meal_description}". Using strict offline macros.`,
+        });
+      } else {
+        setResult(parsedResult);
+        toast({
+          title: "New Meal Detected!",
+          description: `AI successfully generated custom macros for identifying the new food.`,
+        });
+      }
       
     } catch (err: unknown) {
       const error = err as Error;
