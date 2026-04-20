@@ -69,7 +69,7 @@ const Analyze = () => {
         throw new Error("Missing Gemini API Key. Please add VITE_GEMINI_API_KEY to your .env file.");
       }
 
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
 
       // Extract base64 and mime type
       const base64Data = image.split(",")[1];
