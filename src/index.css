@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* NutriSnap Design System - Health & Wellness Theme */
+
+@layer base {
+  :root {
+    /* Fresh green palette for health/wellness */
+    --background: 120 20% 98%;
+    --foreground: 150 30% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 150 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 30% 15%;
+
+    /* Primary: Fresh green */
+    --primary: 142 70% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Light sage */
+    --secondary: 140 30% 94%;
+    --secondary-foreground: 150 30% 25%;
+
+    --muted: 140 20% 95%;
+    --muted-foreground: 150 15% 45%;
+
+    /* Accent: Vibrant lime */
+    --accent: 84 65% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 140 20% 88%;
+    --input: 140 20% 88%;
+    --ring: 142 70% 45%;
+
+    --radius: 0.75rem;
+
+    /* Custom nutrition colors */
+    --calories: 24 95% 53%;
+    --protein: 280 65% 55%;
+    --carbs: 45 93% 47%;
+    --fat: 200 80% 50%;
+    --fiber: 142 50% 45%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(142, 70%, 45%), hsl(84, 65%, 50%));
+    --gradient-hero: linear-gradient(180deg, hsl(120, 20%, 98%) 0%, hsl(140, 30%, 94%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0, 0%, 100%), hsl(140, 30%, 98%));
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px -2px hsl(142, 30%, 40%, 0.1);
+    --shadow-md: 0 8px 24px -4px hsl(142, 30%, 40%, 0.15);
+    --shadow-lg: 0 20px 40px -8px hsl(142, 30%, 40%, 0.2);
+
+    --sidebar-background: 140 25% 97%;
+    --sidebar-foreground: 150 30% 20%;
+    --sidebar-primary: 142 70% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 140 30% 92%;
+    --sidebar-accent-foreground: 150 30% 20%;
+    --sidebar-border: 140 20% 88%;
+    --sidebar-ring: 142 70% 45%;
+  }
+
+  .dark {
+    --background: 150 25% 8%;
+    --foreground: 140 20% 95%;
+
+    --card: 150 20% 12%;
+    --card-foreground: 140 20% 95%;
+
+    --popover: 150 20% 12%;
+    --popover-foreground: 140 20% 95%;
+
+    --primary: 142 65% 50%;
+    --primary-foreground: 150 30% 10%;
+
+    --secondary: 150 20% 18%;
+    --secondary-foreground: 140 20% 90%;
+
+    --muted: 150 15% 20%;
+    --muted-foreground: 140 15% 60%;
+
+    --accent: 84 60% 55%;
+    --accent-foreground: 150 30% 10%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 15% 22%;
+    --input: 150 15% 22%;
+    --ring: 142 65% 50%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(142, 65%, 50%), hsl(84, 60%, 55%));
+    --gradient-hero: linear-gradient(180deg, hsl(150, 25%, 8%) 0%, hsl(150, 20%, 12%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(150, 20%, 12%), hsl(150, 15%, 15%));
+
+    --sidebar-background: 150 20% 10%;
+    --sidebar-foreground: 140 20% 90%;
+    --sidebar-primary: 142 65% 50%;
+    --sidebar-primary-foreground: 150 30% 10%;
+    --sidebar-accent: 150 15% 18%;
+    --sidebar-accent-foreground: 140 20% 90%;
+    --sidebar-border: 150 15% 22%;
+    --sidebar-ring: 142 65% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', sans-serif;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .shadow-soft {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .shadow-elevated {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-floating {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
