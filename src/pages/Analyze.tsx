@@ -29,65 +29,6 @@ interface AnalysisResult {
   meal_description: string;
 }
 
-// A dictionary of realistic mock meals
-const REALISTIC_MOCK_MEALS = [
-  {
-    meal_description: "Grilled Chicken Breast with Brown Rice and Steamed Broccoli",
-    total_calories: 520,
-    total_protein: 45,
-    total_carbs: 55,
-    total_fat: 10,
-    total_fiber: 8,
-    food_items: [
-      { name: "Grilled Chicken Breast", portion: "150g", calories: 240, protein: 40, carbs: 0, fat: 5, fiber: 0 },
-      { name: "Brown Rice", portion: "1 cup", calories: 215, protein: 5, carbs: 45, fat: 2, fiber: 4 },
-      { name: "Steamed Broccoli", portion: "1 cup", calories: 65, protein: 0, carbs: 10, fat: 3, fiber: 4 }
-    ]
-  },
-  {
-    meal_description: "Mass Gainer Protein Shake with Peanut Butter and Banana",
-    total_calories: 680,
-    total_protein: 52,
-    total_carbs: 65,
-    total_fat: 22,
-    total_fiber: 6,
-    food_items: [
-      { name: "Whey Protein Isolate", portion: "2 scoops", calories: 240, protein: 50, carbs: 4, fat: 1, fiber: 0 },
-      { name: "Peanut Butter", portion: "2 tbsp", calories: 190, protein: 1, carbs: 6, fat: 16, fiber: 2 },
-      { name: "Large Banana", portion: "1 unit", calories: 120, protein: 1, carbs: 32, fat: 0, fiber: 4 },
-      { name: "Whole Milk", portion: "1 cup", calories: 130, protein: 0, carbs: 23, fat: 5, fiber: 0 }
-    ]
-  },
-  {
-    meal_description: "Lean Steak with Sweet Potato Fries and Asparagus",
-    total_calories: 640,
-    total_protein: 48,
-    total_carbs: 45,
-    total_fat: 28,
-    total_fiber: 7,
-    food_items: [
-      { name: "Sirloin Steak", portion: "200g", calories: 420, protein: 45, carbs: 0, fat: 22, fiber: 0 },
-      { name: "Sweet Potato Fries", portion: "150g", calories: 180, protein: 1, carbs: 40, fat: 4, fiber: 5 },
-      { name: "Grilled Asparagus", portion: "1 cup", calories: 40, protein: 2, carbs: 5, fat: 2, fiber: 2 }
-    ]
-  },
-  {
-    meal_description: "Overnight Oats with Chia Seeds and Mixed Berries",
-    total_calories: 380,
-    total_protein: 14,
-    total_carbs: 55,
-    total_fat: 12,
-    total_fiber: 12,
-    food_items: [
-      { name: "Rolled Oats", portion: "1/2 cup", calories: 150, protein: 5, carbs: 27, fat: 3, fiber: 4 },
-      { name: "Chia Seeds", portion: "1 tbsp", calories: 60, protein: 2, carbs: 5, fat: 4, fiber: 4 },
-      { name: "Mixed Berries", portion: "1/2 cup", calories: 40, protein: 1, carbs: 9, fat: 0, fiber: 4 },
-      { name: "Almond Milk", portion: "1 cup", calories: 30, protein: 1, carbs: 1, fat: 2, fiber: 0 },
-      { name: "Honey", portion: "1 tbsp", calories: 100, protein: 5, carbs: 13, fat: 3, fiber: 0 }
-    ]
-  }
-];
-
 const Analyze = () => {
   const [image, setImage] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -123,40 +64,75 @@ const Analyze = () => {
 
     setAnalyzing(true);
     try {
-      // User's requested API integration execution:
-      const apiUrl = "https://httpbin.org/anything/bearer";
-      const bearerToken = "a50f70c7cfacd313aa65717514282a7d23c37d44";
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("Missing Gemini API Key. Please add VITE_GEMINI_API_KEY to your .env file.");
+      }
 
-      // 1. We hit the requested httpbin dummy endpoint using the user's explicit token
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+
+      // Extract base64 and mime type
+      const base64Data = image.split(",")[1];
+      const mimeType = image.split(";")[0].split(":")[1];
+
+      const prompt = `Analyze this food image. Identify the meal and break it down into food items. Then provide realistic macros (calories, protein, carbs, fat, fiber). Return the response exactly as a JSON object matching this TypeScript interface, with no markdown wrappers or backticks:
+interface FoodItem { name: string; portion: string; calories: number; protein: number; carbs: number; fat: number; fiber: number; }
+interface AnalysisResult { food_items: FoodItem[]; total_calories: number; total_protein: number; total_carbs: number; total_fat: number; total_fiber: number; meal_description: string; }`;
+
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${bearerToken}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "X-goog-api-key": apiKey
         },
         body: JSON.stringify({
-          image_data: image // The base64 image string
+          contents: [{
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: mimeType,
+                  data: base64Data
+                }
+              }
+            ]
+          }],
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
         })
       });
 
       if (!response.ok) {
-         throw new Error("HTTP request failed with status: " + response.status);
+         const errorText = await response.text();
+         throw new Error("API request failed: " + errorText);
       }
 
-      // 2. httpbin simply echoes back everything we sent.
       const responseData = await response.json();
       
-      // 3. Since the demo API doesn't process images, we construct an intelligent pseudo-result.
-      // We'll use the length of the base64 string to deterministically pick a realistic meal,
-      // so the same image always yields the same result.
-      const imageLength = responseData.json?.image_data?.length || image.length;
-      const mealIndex = imageLength % REALISTIC_MOCK_MEALS.length;
-      const assignedMeal = REALISTIC_MOCK_MEALS[mealIndex];
+      const content = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!content) {
+        throw new Error("Could not parse the AI response.");
+      }
 
-      setResult(assignedMeal);
+      let parsedResult: AnalysisResult;
+      try {
+        let jsonStr = content.trim();
+        // Fallback in case gemini hallucinates markdown block
+        if (jsonStr.startsWith("```json")) jsonStr = jsonStr.substring(7);
+        if (jsonStr.startsWith("```")) jsonStr = jsonStr.substring(3);
+        if (jsonStr.endsWith("```")) jsonStr = jsonStr.slice(0, -3);
+        
+        parsedResult = JSON.parse(jsonStr.trim());
+      } catch (e) {
+        console.error("JSON Error:", e, "Raw output:", content);
+        throw new Error("The AI returned an invalid format. Please try again.");
+      }
+
+      setResult(parsedResult);
       toast({
         title: "Analysis complete!",
-        description: `Successfully analyzed image via API.`,
+        description: `Successfully analyzed image with Gemini Vision AI.`,
       });
     } catch (error) {
       console.error("Analysis error:", error);
