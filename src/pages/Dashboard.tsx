@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Camera, BookOpen, Calendar, Plus, TrendingUp, Flame, Drumstick, Wheat, Droplets } from "lucide-react";
-import { format } from "date-fns";
+import { Camera, BookOpen, Calendar, Plus, TrendingUp, Flame, Drumstick, Wheat, Droplets, Trophy } from "lucide-react";
+import { format, subDays, isSameDay, parseISO } from "date-fns";
+import WaterTracker from "@/components/dashboard/WaterTracker";
+import MealSuggestions from "@/components/dashboard/MealSuggestions";
 
 interface Profile {
   name: string | null;
@@ -15,6 +17,8 @@ interface Profile {
   daily_protein_goal: number;
   daily_carbs_goal: number;
   daily_fat_goal: number;
+  current_streak?: number;
+  last_login_date?: string;
 }
 
 interface DailyTotals {
@@ -34,22 +38,58 @@ const Dashboard = () => {
       const user = auth.currentUser;
       if (!user) return;
 
-      // Fetch profile
+      // Fetch profile and handle streak
       let userProfile = null;
       const profileRef = doc(db, "profiles", user.uid);
       const profileSnap = await getDoc(profileRef);
 
       if (profileSnap.exists()) {
         userProfile = profileSnap.data() as Profile;
+        
+        // Streak logic
+        const todayStr = format(new Date(), "yyyy-MM-dd");
+        const lastLoginStr = userProfile.last_login_date;
+        let newStreak = userProfile.current_streak || 0;
+
+        if (!lastLoginStr) {
+          newStreak = 1;
+        } else {
+          const lastLoginDate = parseISO(lastLoginStr);
+          const yesterday = subDays(new Date(), 1);
+          
+          if (isSameDay(lastLoginDate, new Date())) {
+            // Already logged in today, keep streak
+          } else if (isSameDay(lastLoginDate, yesterday)) {
+            // Logged in yesterday, increment streak
+            newStreak += 1;
+          } else {
+            // Missed a day, reset streak
+            newStreak = 1;
+          }
+        }
+
+        if (lastLoginStr !== todayStr) {
+          await updateDoc(profileRef, {
+            current_streak: newStreak,
+            last_login_date: todayStr,
+            updated_at: new Date().toISOString()
+          });
+          userProfile.current_streak = newStreak;
+          userProfile.last_login_date = todayStr;
+        }
+        
         setProfile(userProfile);
       } else {
         // Create default profile
+        const todayStr = format(new Date(), "yyyy-MM-dd");
         userProfile = {
           name: null,
           daily_calorie_goal: 2000,
           daily_protein_goal: 50,
           daily_carbs_goal: 250,
           daily_fat_goal: 65,
+          current_streak: 1,
+          last_login_date: todayStr
         };
         await setDoc(profileRef, {
           user_id: user.uid,
@@ -112,13 +152,26 @@ const Dashboard = () => {
     <AppLayout>
       <div className="max-w-6xl mx-auto pb-20 lg:pb-0">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-display font-bold text-foreground">
-            {profile?.name ? `Hey, ${profile.name}!` : "Welcome back!"}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {format(new Date(), "EEEE, MMMM d, yyyy")}
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-display font-bold text-foreground">
+              {profile?.name ? `Hey, ${profile.name}!` : "Welcome back!"}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {format(new Date(), "EEEE, MMMM d, yyyy")}
+            </p>
+          </div>
+          {profile?.current_streak !== undefined && (
+            <div className="flex items-center gap-3 bg-accent/10 px-4 py-2 rounded-2xl border border-accent/20 w-fit">
+              <div className="bg-accent text-accent-foreground p-2 rounded-xl">
+                <Trophy className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Current Streak</p>
+                <p className="text-xl font-bold text-foreground">{profile.current_streak} Days</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Daily Progress */}
@@ -219,16 +272,20 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Tips Card */}
-        <Card className="gradient-primary text-primary-foreground shadow-floating">
-          <CardContent className="p-6">
-            <h3 className="font-display font-semibold text-lg mb-2">💡 Pro Tip</h3>
-            <p className="opacity-90">
-              Take photos of your meals right before eating for the most accurate nutrition tracking. 
-              The AI works best with well-lit photos showing all food items clearly.
-            </p>
-          </CardContent>
-        </Card>
+        {/* Water & Suggestions Section */}
+        <div className="grid lg:grid-cols-2 gap-8 mb-8">
+          <WaterTracker />
+          
+          <MealSuggestions 
+            dailyTotals={dailyTotals} 
+            goals={{
+              daily_calorie_goal: profile?.daily_calorie_goal || 2000,
+              daily_protein_goal: profile?.daily_protein_goal || 50,
+              daily_carbs_goal: profile?.daily_carbs_goal || 250,
+              daily_fat_goal: profile?.daily_fat_goal || 65,
+            }} 
+          />
+        </div>
       </div>
     </AppLayout>
   );

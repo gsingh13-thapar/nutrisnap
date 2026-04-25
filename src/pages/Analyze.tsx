@@ -5,9 +5,10 @@ import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Upload, Loader2, Flame, Drumstick, Wheat, Droplets, Leaf, Save, RotateCcw } from "lucide-react";
+import { Camera, Upload, Loader2, Flame, Drumstick, Wheat, Droplets, Leaf, Save, RotateCcw, Barcode, Image as ImageIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
+import BarcodeScanner from "@/components/analysis/BarcodeScanner";
 
 interface FoodItem {
   name: string;
@@ -89,6 +90,7 @@ const REALISTIC_MOCK_MEALS = [
 ];
 
 const Analyze = () => {
+  const [isScanningBarcode, setIsScanningBarcode] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -156,7 +158,7 @@ const Analyze = () => {
         throw new Error("Missing Gemini API Key. Please add VITE_GEMINI_API_KEY to your .env file.");
       }
 
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
       const base64Data = image.split(",")[1];
       const mimeType = image.split(";")[0].split(":")[1];
 
@@ -317,9 +319,16 @@ interface AnalysisResult { food_items: FoodItem[]; total_calories: number; total
     }
   };
 
+  const handleBarcodeSuccess = (data: AnalysisResult) => {
+    setResult(data);
+    setIsScanningBarcode(false);
+    setImage(null);
+  };
+
   const reset = () => {
     setImage(null);
     setResult(null);
+    setIsScanningBarcode(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -328,75 +337,116 @@ interface AnalysisResult { food_items: FoodItem[]; total_calories: number; total
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto pb-20 lg:pb-0">
-        <div className="mb-8">
-          <h1 className="text-3xl font-display font-bold text-foreground">Analyze Food</h1>
-          <p className="text-muted-foreground mt-1">
-            Take or upload a photo to get instant nutrition information
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-display font-bold text-foreground">Analyze Food</h1>
+            <p className="text-muted-foreground mt-1">
+              Identify food using AI image analysis or scan a barcode
+            </p>
+          </div>
+          
+          <div className="flex bg-muted p-1 rounded-xl w-fit">
+            <Button 
+              variant={!isScanningBarcode ? "default" : "ghost"} 
+              size="sm"
+              onClick={() => { setIsScanningBarcode(false); setResult(null); }}
+              className={`rounded-lg ${!isScanningBarcode ? "shadow-sm" : ""}`}
+            >
+              <ImageIcon className="w-4 h-4 mr-2" />
+              Photo
+            </Button>
+            <Button 
+              variant={isScanningBarcode ? "default" : "ghost"} 
+              size="sm"
+              onClick={() => { setIsScanningBarcode(true); setResult(null); setImage(null); }}
+              className={`rounded-lg ${isScanningBarcode ? "shadow-sm" : ""}`}
+            >
+              <Barcode className="w-4 h-4 mr-2" />
+              Barcode
+            </Button>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
           <Card className="shadow-elevated">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-display">
-                <Camera className="w-5 h-5 text-primary" />
-                Upload Photo
+                {isScanningBarcode ? (
+                  <>
+                    <Barcode className="w-5 h-5 text-primary" />
+                    Scan Barcode
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-5 h-5 text-primary" />
+                    Upload Photo
+                  </>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-
-              {!image ? (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-border rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
-                >
-                  <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-lg font-medium mb-2">Click to upload a photo</p>
-                  <p className="text-sm text-muted-foreground">
-                    or drag and drop an image here
-                  </p>
-                </div>
+              {isScanningBarcode ? (
+                <BarcodeScanner 
+                  onScanSuccess={handleBarcodeSuccess} 
+                  onClose={() => setIsScanningBarcode(false)} 
+                />
               ) : (
-                <div className="space-y-4">
-                  <div className="relative rounded-xl overflow-hidden">
-                    <img
-                      src={image}
-                      alt="Food to analyze"
-                      className="w-full h-64 object-cover"
-                    />
-                  </div>
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
 
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={analyzeImage}
-                      disabled={analyzing}
-                      className="flex-1 gradient-primary"
+                  {!image ? (
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-border rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
                     >
-                      {analyzing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Camera className="w-4 h-4 mr-2" />
-                          Analyze Photo
-                        </>
-                      )}
-                    </Button>
-                    <Button variant="outline" onClick={reset}>
-                      <RotateCcw className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                      <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-lg font-medium mb-2">Click to upload a photo</p>
+                      <p className="text-sm text-muted-foreground">
+                        or drag and drop an image here
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="relative rounded-xl overflow-hidden">
+                        <img
+                          src={image}
+                          alt="Food to analyze"
+                          className="w-full h-64 object-cover"
+                        />
+                      </div>
+
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={analyzeImage}
+                          disabled={analyzing}
+                          className="flex-1 gradient-primary"
+                        >
+                          {analyzing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Analyzing...
+                            </>
+                          ) : (
+                            <>
+                              <Camera className="w-4 h-4 mr-2" />
+                              Analyze Photo
+                            </>
+                          )}
+                        </Button>
+                        <Button variant="outline" onClick={reset}>
+                          <RotateCcw className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
